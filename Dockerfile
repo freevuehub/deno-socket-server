@@ -11,6 +11,6 @@ RUN deno cache deps.ts
 
 ADD . .
 
-RUN deno cache server.ts
+RUN deno cache main.ts
 
 CMD ["run", "-A", "main.ts"]
