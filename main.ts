@@ -1,13 +1,31 @@
-import { WebSocketClient, WebSocketServer } from './deps.ts'
+import { serve, ws } from './deps.ts'
 
-const wss = new WebSocketServer(Number(Deno.env.get('PORT') || 8080))
+const port: number = Number(Deno.env.get('PORT') || 8080)
 
-wss.on('connection', (ws: WebSocketClient) => {
-  console.log('socket connected!')
+for await(const request of serve({ port })) {
+  const wsData={
+    conn: request.conn,
+    bufReader: request.r,
+    bufWriter: request.w,
+    headers: request.headers
+  }
 
-  ws.on('message', (message: string) => {
-    console.log(message)
+  try {
+    const socketIo = await ws.acceptWebSocket(wsData)
 
-    ws.send(message)
-  })
-})
+    for await (const event of socketIo) {
+      if (ws.isWebSocketCloseEvent(event)) {
+        console.log('소켓이 닫힘..')
+
+        break
+      } else if (typeof event === 'string') {
+        socketIo.send(event)
+      }
+    }
+  } catch(err) {
+    request.respond({
+      status: 400,
+      body: 'Server Error',
+    })
+  }
+}
